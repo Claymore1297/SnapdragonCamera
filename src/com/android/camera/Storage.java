@@ -35,6 +35,8 @@ import android.util.Log;
 import com.android.camera.data.LocalData;
 import com.android.camera.exif.ExifInterface;
 import com.android.camera.util.ApiHelper;
+import androidx.heifwriter.HeifWriter;
+import android.graphics.ImageFormat;
 
 public class Storage {
     private static final String TAG = "CameraStorage";
@@ -45,6 +47,7 @@ public class Storage {
     public static final String DIRECTORY = DCIM + "/Camera";
     public static final String RAW_DIRECTORY = DCIM + "/Camera/raw";
     public static final String JPEG_POSTFIX = ".jpg";
+    public static final String HEIF_POSTFIX = ".heic";
 
     // Match the code in MediaProvider.computeBucketValues().
     public static final String BUCKET_ID =
@@ -124,26 +127,39 @@ public class Storage {
         if (f.exists() && f.isFile()) {
             size = (int) f.length();
         }
-        return addImage(resolver, title, date, location, orientation,
+        return addImage(resolver, title, date, location, orientation, exif,
                 size, path, width, height, mimeType);
     }
 
     // Get a ContentValues object for the given photo data
     public static ContentValues getContentValuesForData(String title,
-            long date, Location location, int orientation, int jpegLength,
+            long date, Location location, int orientation, ExifInterface exif, int jpegLength,
             String path, int width, int height, String mimeType) {
         // Insert into MediaStore.
         ContentValues values = new ContentValues(9);
         values.put(ImageColumns.TITLE, title);
         if (mimeType.equalsIgnoreCase("jpeg") ||
             mimeType.equalsIgnoreCase("image/jpeg") ||
+                mimeType.equalsIgnoreCase("heif") ||
             mimeType == null) {
-            values.put(ImageColumns.DISPLAY_NAME, title + ".jpg");
+
+            if (mimeType.equalsIgnoreCase("heif")){
+                values.put(ImageColumns.DISPLAY_NAME, title + ".heic");
+            } else if(mimeType.equalsIgnoreCase("heifs")){
+                values.put(ImageColumns.DISPLAY_NAME, title + ".heics");
+            } else {
+                values.put(ImageColumns.DISPLAY_NAME, title + ".jpg");
+            }
+
         } else {
             values.put(ImageColumns.DISPLAY_NAME, title + ".raw");
         }
         values.put(ImageColumns.DATE_TAKEN, date);
-        values.put(ImageColumns.MIME_TYPE, "image/jpeg");
+        if (mimeType.equalsIgnoreCase("heif")) {
+            values.put(ImageColumns.MIME_TYPE, "image/heif");
+        } else {
+            values.put(ImageColumns.MIME_TYPE, "image/jpeg");
+        }
         // Clockwise rotation in degrees. 0, 90, 180, or 270.
         values.put(ImageColumns.ORIENTATION, orientation);
         values.put(ImageColumns.DATA, path);
@@ -154,20 +170,37 @@ public class Storage {
         if (location != null) {
             values.put(ImageColumns.LATITUDE, location.getLatitude());
             values.put(ImageColumns.LONGITUDE, location.getLongitude());
+        } else if (exif != null) {
+            double[] latlng = exif.getLatLongAsDoubles();
+            if (latlng != null) {
+                values.put(Images.Media.LATITUDE, latlng[0]);
+                values.put(Images.Media.LONGITUDE, latlng[1]);
+            }
         }
         return values;
     }
 
     // Add the image to media store.
     public static Uri addImage(ContentResolver resolver, String title,
-            long date, Location location, int orientation, int jpegLength,
+            long date, Location location, int orientation, ExifInterface exif,int jpegLength,
             String path, int width, int height, String mimeType) {
         // Insert into MediaStore.
         ContentValues values =
-                getContentValuesForData(title, date, location, orientation, jpegLength, path,
+                getContentValuesForData(title, date, location, orientation, exif, jpegLength, path,
                         width, height, mimeType);
 
          return insertImage(resolver, values);
+    }
+
+    public static Uri addImage(ContentResolver resolver, String title,
+                               long date, Location location, int orientation,int jpegLength,
+                               String path, int width, int height, String mimeType) {
+        // Insert into MediaStore.
+        ContentValues values =
+                getContentValuesForData(title, date, location, orientation, null, jpegLength,
+                        path, width, height, mimeType);
+
+        return insertImage(resolver, values);
     }
 
     public static long addRawImage(String title, byte[] data,
@@ -180,6 +213,18 @@ public class Storage {
             size = (int) f.length();
         }
         return size;
+    }
+
+    public static Uri addHeifImage(ContentResolver resolver, String title, long date,
+                                   Location location, int orientation, ExifInterface exif, String path, int width,
+                                   int height, int quality, String mimeType) {
+        File f = new File(path);
+        int size = 0;
+        if (f.exists() && f.isFile()) {
+            size = (int) f.length();
+        }
+        return addImage(resolver, title, date, location, orientation,
+                size, path, width, height, mimeType);
     }
 
     // Overwrites the file and updates the MediaStore, or inserts the image if
@@ -200,7 +245,7 @@ public class Storage {
             String path, int width, int height, String mimeType) {
 
         ContentValues values =
-                getContentValuesForData(title, date, location, orientation, jpegLength, path,
+                getContentValuesForData(title, date, location, orientation, null, jpegLength, path,
                         width, height, mimeType);
 
         // Update the MediaStore
@@ -226,11 +271,19 @@ public class Storage {
     }
 
     public static String generateFilepath(String title, String pictureFormat) {
-        if (pictureFormat == null || pictureFormat.equalsIgnoreCase("jpeg")) {
+        if (pictureFormat == null || pictureFormat.equalsIgnoreCase("jpeg")
+                || pictureFormat.equalsIgnoreCase("heif")
+                || pictureFormat.equalsIgnoreCase("heifs")) {
+            String suffix = ".jpg";
+            if (pictureFormat.equalsIgnoreCase("heif")) {
+                suffix = ".heic";
+            }else if(pictureFormat.equalsIgnoreCase("heifs")) {
+                suffix = ".heics";
+            }
             if (isSaveSDCard() && SDCard.instance().isWriteable()) {
-                return SDCard.instance().getDirectory() + '/' + title + ".jpg";
+                return SDCard.instance().getDirectory() + '/' + title + suffix;
             } else {
-                return DIRECTORY + '/' + title + ".jpg";
+                return DIRECTORY + '/' + title + suffix;
             }
         } else {
             return RAW_DIRECTORY + '/' + title + ".raw";

@@ -468,18 +468,32 @@ public class CameraUtil {
         return naturalWidth < naturalHeight;
     }
 
+    public static int getDisplayOrientationCamera2(int degrees, int cameraId) {
+        CameraCharacteristics info = CameraHolder.instance().getCameraCharacteristics(cameraId);
+        int result;
+        if (info.get(CameraCharacteristics.LENS_FACING) ==
+                CameraCharacteristics.LENS_FACING_FRONT) {
+            result = (info.get(CameraCharacteristics.SENSOR_ORIENTATION) + degrees) % 360;
+            result = (360 - result) % 360;  // compensate the mirror
+        } else {
+            result = (info.get(CameraCharacteristics.SENSOR_ORIENTATION) - degrees + 360) % 360;
+        }
+        return result;
+    }
+
     public static int getDisplayOrientation(int degrees, int cameraId) {
         // See android.hardware.Camera.setDisplayOrientation for
         // documentation.
+        int result = 0;
         Camera.CameraInfo info = new Camera.CameraInfo();
         Camera.getCameraInfo(cameraId, info);
-        int result;
         if (info.facing == Camera.CameraInfo.CAMERA_FACING_FRONT) {
             result = (info.orientation + degrees) % 360;
             result = (360 - result) % 360;  // compensate the mirror
         } else {  // back-facing
             result = (info.orientation - degrees + 360) % 360;
         }
+
         return result;
     }
 
@@ -505,7 +519,7 @@ public class CameraUtil {
     }
 
     private static Point getDefaultDisplaySize(Activity activity, Point size) {
-        activity.getWindowManager().getDefaultDisplay().getSize(size);
+        activity.getWindowManager().getDefaultDisplay().getRealSize(size);
         //cap the display resolution given to getOptimalPreviewSize if the below properties
         //are set. For example if the properties are set as below :
         //adb shell setprop camera.display.umax 1920x1080
@@ -577,7 +591,7 @@ public class CameraUtil {
         for (int i = 0; i < sizes.length; i++) {
             Point size = sizes[i];
             double ratio = (double) size.x / size.y;
-            if (Math.abs(ratio - targetRatio) > ASPECT_TOLERANCE || size.x > 1080) continue;
+            if (Math.abs(ratio - targetRatio) > ASPECT_TOLERANCE) continue;
 
             // Count sizes with height <= 1080p to mimic camera1 api behavior.
             if (size.y > MAX_ASPECT_HEIGHT) continue;
