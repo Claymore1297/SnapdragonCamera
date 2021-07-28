@@ -417,7 +417,10 @@ public class CameraActivity extends Activity
             if (e.getCause().getLocalizedMessage().indexOf("Unknown camera error") != -1) {
                 support = false;
                 Log.d(TAG,"cameraAPICheck support1 ="+support);
+            } else if (e.getCause().getLocalizedMessage().indexOf("Unsupported HAL version") != -1) {
+                Log.d(TAG,"cameraAPICheck Unsupported HAL version support1 ="+support);
             }
+            support = false;
         } finally {
             SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(this);
             SharedPreferences.Editor editor = preferences.edit();
