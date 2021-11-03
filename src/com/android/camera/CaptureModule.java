@@ -1312,6 +1312,8 @@ public class CaptureModule implements CameraModule, PhotoController,
                                     mPostProcessor.onSessionConfigured(mCameraDevice[id], mCaptureSession[id]);
                                 }
 
+                                mFirstPreviewLoaded = false;
+
                             } catch (CameraAccessException e) {
                                 e.printStackTrace();
                             } catch(IllegalStateException e) {
@@ -3998,11 +4000,10 @@ public class CaptureModule implements CameraModule, PhotoController,
             if (mHighSpeedCapture) {
                 preview = mVideoSize;
             }
-            boolean changed = mUI.setPreviewSize(preview.getWidth(),
+            final boolean changed = mUI.setPreviewSize(preview.getWidth(),
                     preview.getHeight());
             if (changed) {
-                mUI.hideSurfaceView();
-                mUI.showSurfaceView();
+                mUI.showPreviewCover();
             }
             if (mHiston) {
                 updateGraghViewVisibility(View.GONE);
@@ -4100,6 +4101,9 @@ public class CaptureModule implements CameraModule, PhotoController,
                             e.printStackTrace();
                         } catch (IllegalStateException e) {
                             e.printStackTrace();
+                        }
+                        if (changed) {
+                            mFirstPreviewLoaded = false;
                         }
                         if (!mFrameProcessor.isFrameListnerEnabled() && !startMediaRecorder()) {
                             mUI.showUIafterRecording();
@@ -4553,8 +4557,7 @@ public class CaptureModule implements CameraModule, PhotoController,
         }
         boolean changed = mUI.setPreviewSize(mPreviewSize.getWidth(), mPreviewSize.getHeight());
         if (changed) {
-            mUI.hideSurfaceView();
-            mUI.showSurfaceView();
+            mUI.showPreviewCover();
         }
         if (!mPaused) {
             createSessions();
