@@ -3009,11 +3009,9 @@ public class CaptureModule implements CameraModule, PhotoController,
             mInitHeifWriter.close();
         }
         closeCamera();
-        mUI.hideSurfaceView();
         resetAudioMute();
         mUI.releaseSoundPool();
         mUI.showPreviewCover();
-        mFirstPreviewLoaded = false;
         stopBackgroundThread();
         mLastJpegData = null;
         setProModeVisible();
