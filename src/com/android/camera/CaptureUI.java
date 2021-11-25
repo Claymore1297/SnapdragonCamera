@@ -1811,6 +1811,8 @@ public class CaptureUI implements FocusOverlayManager.FocusUI,
         mPreviewHeight = height;
         if (changed) {
             showSurfaceView();
+        } else {
+            previewUIReady();
         }
         return changed;
     }
