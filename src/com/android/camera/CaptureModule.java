@@ -4059,6 +4059,9 @@ public class CaptureModule implements CameraModule, PhotoController,
                                         + e.getMessage());
                             e.printStackTrace();
                         }
+                        if (changed) {
+                            mFirstPreviewLoaded = false;
+                        }
                         if (!mFrameProcessor.isFrameListnerEnabled() && !startMediaRecorder()) {
                             mUI.showUIafterRecording();
                             releaseMediaRecorder();
